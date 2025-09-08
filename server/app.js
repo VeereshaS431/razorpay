@@ -46,67 +46,67 @@ app.get("/", (req, res) => {
 })
 
 
-const razorpay = new Razorpay({
-    key_id: process.env.RZP_KEY_ID,
-    key_secret: process.env.RZP_KEY_SECRET
-});
+// const razorpay = new Razorpay({
+//     key_id: process.env.RZP_KEY_ID,
+//     key_secret: process.env.RZP_KEY_SECRET
+// });
 
 // create order
-app.post('/create-order', async (req, res) => {
-    try {
-        const amountInRupees = req.body.amount || 1;
-        const options = {
-            amount: amountInRupees * 100,
-            currency: 'INR',
-            receipt: `receipt_${Date.now()}`,
-        };
-        const order = await razorpay.orders.create(options);
-        res.json(order);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: err.message });
-    }
-});
+// app.post('/create-order', async (req, res) => {
+//     try {
+//         const amountInRupees = req.body.amount || 1;
+//         const options = {
+//             amount: amountInRupees * 100,
+//             currency: 'INR',
+//             receipt: `receipt_${Date.now()}`,
+//         };
+//         const order = await razorpay.orders.create(options);
+//         res.json(order);
+//     } catch (err) {
+//         console.error(err);
+//         res.status(500).json({ error: err.message });
+//     }
+// });
 
 
 
 // verify payment signtaure
-app.post('/verify-payment', (req, res) => {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-    const sign = razorpay_order_id + "|" + razorpay_payment_id;
-    const expectedSign = crypto
-        .createHmac("sha256", process.env.RZP_KEY_SECRET)
-        .update(sign.toString())
-        .digest("hex");
+// app.post('/verify-payment', (req, res) => {
+//     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+//     const sign = razorpay_order_id + "|" + razorpay_payment_id;
+//     const expectedSign = crypto
+//         .createHmac("sha256", process.env.RZP_KEY_SECRET)
+//         .update(sign.toString())
+//         .digest("hex");
 
-    if (razorpay_signature === expectedSign) {
-        res.json({ status: "success" });
-    } else {
-        res.status(400).json({ status: "failure" });
-    }
-});
+//     if (razorpay_signature === expectedSign) {
+//         res.json({ status: "success" });
+//     } else {
+//         res.status(400).json({ status: "failure" });
+//     }
+// });
 
 
 
-app.post(
-    '/webhook',
-    express.raw({ type: 'application/json' }),
-    (req, res) => {
-        const secret = process.env.WEBHOOK_SECRET;
-        const signature = req.headers['x-razorpay-signature'];
-        const expectedSign = crypto
-            .createHmac('sha256', secret)
-            .update(req.body)
-            .digest('hex');
+// app.post(
+//     '/webhook',
+//     express.raw({ type: 'application/json' }),
+//     (req, res) => {
+//         const secret = process.env.WEBHOOK_SECRET;
+//         const signature = req.headers['x-razorpay-signature'];
+//         const expectedSign = crypto
+//             .createHmac('sha256', secret)
+//             .update(req.body)
+//             .digest('hex');
 
-        if (expectedSign === signature) {
-            console.log("Webhook verified:", JSON.parse(req.body.toString()));
-            res.status(200).send("ok");
-        } else {
-            res.status(400).send("invalid signature");
-        }
-    }
-);
+//         if (expectedSign === signature) {
+//             console.log("Webhook verified:", JSON.parse(req.body.toString()));
+//             res.status(200).send("ok");
+//         } else {
+//             res.status(400).send("invalid signature");
+//         }
+//     }
+// );
 
 
 
