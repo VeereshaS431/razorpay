@@ -33,7 +33,7 @@ const corsOpts = {
 
 app.use(cors(corsOpts));
 
-app.use(express.json())
+
 
 app.use("/api/user", userRoute);
 app.use("/api/chat", chatRoute)
@@ -90,20 +90,20 @@ app.post('/api/verify-payment', (req, res) => {
 
 app.post(
     "/api/webhook",
-    express.raw({ type: "application/json" }),
+    express.raw({ type: "application/json" }), // keeps raw body as Buffer
     (req, res) => {
         const secret = process.env.WEBHOOK_SECRET;
         const signature = req.headers["x-razorpay-signature"];
 
         try {
-            //  req.body is a Buffer (not parsed JSON here)
-            const expectedSign = crypto
-                .createHmac("sha256", secret)
-                .update(req.body) // must be Buffer/string, not object
-                .digest("hex");
+            // req.body is a Buffer
+            const shasum = crypto.createHmac("sha256", secret);
+            shasum.update(req.body);
+            const expectedSign = shasum.digest("hex");
 
             if (expectedSign === signature) {
-                console.log("Webhook verified:", JSON.parse(req.body.toString()));
+                const data = JSON.parse(req.body.toString());
+                console.log("Webhook verified:", data);
                 res.status(200).send("ok");
             } else {
                 console.log("Invalid signature");
@@ -116,6 +116,7 @@ app.post(
     }
 );
 
+app.use(express.json())
 
 async function getAccessToken() {
 
