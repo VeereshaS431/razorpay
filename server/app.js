@@ -7,6 +7,7 @@ const defineAssociation = require("./apis/Associations/associations")
 const cors = require("cors");
 const crypto = require('crypto');
 const Razorpay = require('razorpay');
+const { google } = require("googleapis");
 const server = require("http").createServer(app);
 const io = require("socket.io")(server, {
     cors: {
@@ -46,69 +47,85 @@ app.get("/", (req, res) => {
 })
 
 
-// const razorpay = new Razorpay({
-//     key_id: process.env.RZP_KEY_ID,
-//     key_secret: process.env.RZP_KEY_SECRET
-// });
+const razorpay = new Razorpay({
+    key_id: process.env.RZP_KEY_ID,
+    key_secret: process.env.RZP_KEY_SECRET
+});
 
 // create order
-// app.post('/create-order', async (req, res) => {
-//     try {
-//         const amountInRupees = req.body.amount || 1;
-//         const options = {
-//             amount: amountInRupees * 100,
-//             currency: 'INR',
-//             receipt: `receipt_${Date.now()}`,
-//         };
-//         const order = await razorpay.orders.create(options);
-//         res.json(order);
-//     } catch (err) {
-//         console.error(err);
-//         res.status(500).json({ error: err.message });
-//     }
-// });
+app.post('/api/create-order', async (req, res) => {
+    try {
+        const amountInRupees = req.body.amount || 1;
+        const options = {
+            amount: amountInRupees * 100,
+            currency: 'INR',
+            receipt: `receipt_${Date.now()}`,
+        };
+        const order = await razorpay.orders.create(options);
+        res.json(order);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
+    }
+});
 
 
 
 // verify payment signtaure
-// app.post('/verify-payment', (req, res) => {
-//     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-//     const sign = razorpay_order_id + "|" + razorpay_payment_id;
-//     const expectedSign = crypto
-//         .createHmac("sha256", process.env.RZP_KEY_SECRET)
-//         .update(sign.toString())
-//         .digest("hex");
+app.post('/api/verify-payment', (req, res) => {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    const sign = razorpay_order_id + "|" + razorpay_payment_id;
+    const expectedSign = crypto
+        .createHmac("sha256", process.env.RZP_KEY_SECRET)
+        .update(sign.toString())
+        .digest("hex");
 
-//     if (razorpay_signature === expectedSign) {
-//         res.json({ status: "success" });
-//     } else {
-//         res.status(400).json({ status: "failure" });
-//     }
-// });
-
-
-
-// app.post(
-//     '/webhook',
-//     express.raw({ type: 'application/json' }),
-//     (req, res) => {
-//         const secret = process.env.WEBHOOK_SECRET;
-//         const signature = req.headers['x-razorpay-signature'];
-//         const expectedSign = crypto
-//             .createHmac('sha256', secret)
-//             .update(req.body)
-//             .digest('hex');
-
-//         if (expectedSign === signature) {
-//             console.log("Webhook verified:", JSON.parse(req.body.toString()));
-//             res.status(200).send("ok");
-//         } else {
-//             res.status(400).send("invalid signature");
-//         }
-//     }
-// );
+    if (razorpay_signature === expectedSign) {
+        res.json({ status: "success" });
+    } else {
+        res.status(400).json({ status: "failure" });
+    }
+});
 
 
+app.post(
+    '/api/webhook',
+    express.raw({ type: 'application/json' }),
+    (req, res) => {
+        const secret = process.env.WEBHOOK_SECRET;
+        const signature = req.headers['x-razorpay-signature'];
+        const expectedSign = crypto
+            .createHmac('sha256', secret)
+            .update(req.body)
+            .digest('hex');
+
+        if (expectedSign === signature) {
+            console.log("Webhook verified:", JSON.parse(req.body.toString()));
+            res.status(200).send("ok");
+        } else {
+            res.status(400).send("invalid signature");
+        }
+    }
+);
+
+
+async function getAccessToken() {
+
+    const privateKey = process.env.private_key.replace(/\\n/gm, "\n");
+
+    const jwtClient = new google.auth.JWT({
+        email: process.env.client_email,
+        key: privateKey,
+        scopes: ["https://www.googleapis.com/auth/firebase.messaging"],
+    });
+
+    const tokens = await jwtClient.authorize();
+    console.log("Access Token:", tokens.access_token);
+}
+
+getAccessToken().catch((err) => {
+    console.error("Error generating token:", err);
+});
 
 sequelize.sync().then(() => {
     console.log("database connected")
@@ -132,29 +149,9 @@ server.listen(3000, () => {
 
 
 
-// const { google } = require("googleapis");
-// const fs = require("fs");
 
 
-// const serviceAccount = JSON.parse(
-//   fs.readFileSync("./push-notification-261ea-a7c18ab70cb8.json", "utf8")
-// );
 
-// async function getAccessToken() {
-//   // Replace escaped \n with actual newlines
-//   const privateKey = serviceAccount.private_key.replace(/\\n/gm, "\n");
 
-//   const jwtClient = new google.auth.JWT({
-//     email: serviceAccount.client_email,
-//     key: privateKey,
-//     scopes: ["https://www.googleapis.com/auth/firebase.messaging"],
-//   });
 
-//   const tokens = await jwtClient.authorize();
-//   console.log("Access Token:", tokens.access_token);
-// }
-
-// getAccessToken().catch((err) => {
-//   console.error("Error generating token:", err);
-// });
 

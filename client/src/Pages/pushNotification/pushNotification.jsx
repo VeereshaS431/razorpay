@@ -18,17 +18,17 @@ export default function PushNotification() {
 
     return (
         <>
-            {/* <div style={{ padding: "20px" }}>
-            <h2>Firebase Push Notification Demo</h2>
-            {notification.title ? (
-                <div style={{ border: "1px solid #ccc", padding: "10px", marginTop: "20px" }}>
-                    <h3>{notification.title}</h3>
-                    <p>{notification.body}</p>
-                </div>
-            ) : (
-                <p>No notifications yet...</p>
-            )}
-        </div> */}
+            <div style={{ padding: "20px" }}>
+                <h2>Firebase Push Notification Demo</h2>
+                {notification.title ? (
+                    <div style={{ border: "1px solid #ccc", padding: "10px", marginTop: "20px" }}>
+                        <h3>{notification.title}</h3>
+                        <p>{notification.body}</p>
+                    </div>
+                ) : (
+                    <p>No notifications yet...</p>
+                )}
+            </div>
         </>
     )
 }
