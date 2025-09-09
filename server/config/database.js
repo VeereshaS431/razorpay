@@ -5,6 +5,13 @@ const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, proces
     host: process.env.DB_HOST,
     dialect: "mysql",
     logging: false,
+    port: process.env.DB_PORT,
+    dialectOptions: {
+        ssl: {
+            require: true,
+            rejectUnauthorized: false,
+        },
+    },
     define: {
         timestamps: true,
         underscored: true
