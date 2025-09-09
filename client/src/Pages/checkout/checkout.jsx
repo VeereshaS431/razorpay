@@ -6,7 +6,7 @@ const RazorpayPayment = () => {
 
     const displayRazorpay = async () => {
         try {
-            const { data } = await axios.post("http://localhost:3000/api/create-order", {
+            const { data } = await axios.post("https://razorpay-p2yw.onrender.com/api/create-order", {
                 amount: 50,
             });
             console.log(data, "from created order");
@@ -19,7 +19,7 @@ const RazorpayPayment = () => {
                 order_id: data.id,
                 handler: async function (response) {
                     try {
-                        const verifyRes = await axios.post("http://localhost:3000/api/verify-payment", response);
+                        const verifyRes = await axios.post("https://razorpay-p2yw.onrender.com/api/verify-payment", response);
                         alert(JSON.stringify(verifyRes.data));
                     } catch (err) {
                         console.error("Payment verification failed:", err);

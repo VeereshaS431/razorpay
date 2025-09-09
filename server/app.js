@@ -89,21 +89,29 @@ app.post('/api/verify-payment', (req, res) => {
 
 
 app.post(
-    '/api/webhook',
-    express.raw({ type: 'application/json' }),
+    "/api/webhook",
+    express.raw({ type: "application/json" }),
     (req, res) => {
         const secret = process.env.WEBHOOK_SECRET;
-        const signature = req.headers['x-razorpay-signature'];
-        const expectedSign = crypto
-            .createHmac('sha256', secret)
-            .update(req.body)
-            .digest('hex');
+        const signature = req.headers["x-razorpay-signature"];
 
-        if (expectedSign === signature) {
-            console.log("Webhook verified:", JSON.parse(req.body.toString()));
-            res.status(200).send("ok");
-        } else {
-            res.status(400).send("invalid signature");
+        try {
+            //  req.body is a Buffer (not parsed JSON here)
+            const expectedSign = crypto
+                .createHmac("sha256", secret)
+                .update(req.body) // must be Buffer/string, not object
+                .digest("hex");
+
+            if (expectedSign === signature) {
+                console.log("Webhook verified:", JSON.parse(req.body.toString()));
+                res.status(200).send("ok");
+            } else {
+                console.log("Invalid signature");
+                res.status(400).send("invalid signature");
+            }
+        } catch (err) {
+            console.error("Webhook error:", err);
+            res.status(500).send("server error");
         }
     }
 );

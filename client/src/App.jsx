@@ -17,8 +17,8 @@ function App() {
         </Routes>
       </BrowserRouter>
       <PushNotification /> */}
-      {/* <RazorpayPayment />
-      <PushNotification /> */}
+      <RazorpayPayment />
+      {/* <PushNotification /> */}
     </>
 
   )
