@@ -34,7 +34,35 @@ const corsOpts = {
 app.use(cors(corsOpts));
 
 
+app.post(
+    "/api/webhook",
+    express.raw({ type: "application/json" }), // keeps raw body as Buffer
+    (req, res) => {
+        const secret = process.env.WEBHOOK_SECRET;
+        const signature = req.headers["x-razorpay-signature"];
 
+        try {
+            // req.body is a Buffer
+            const shasum = crypto.createHmac("sha256", secret);
+            shasum.update(req.body);
+            const expectedSign = shasum.digest("hex");
+
+            if (expectedSign === signature) {
+                const data = JSON.parse(req.body.toString());
+                console.log("Webhook verified:", data);
+                res.status(200).send("ok");
+            } else {
+                console.log("Invalid signature");
+                res.status(400).send("invalid signature");
+            }
+        } catch (err) {
+            console.error("Webhook error:", err);
+            res.status(500).send("server error");
+        }
+    }
+);
+
+app.use(express.json())
 app.use("/api/user", userRoute);
 app.use("/api/chat", chatRoute)
 app.use("/api/conversations", require("./apis/routes/conversation.routes"))
@@ -88,35 +116,9 @@ app.post('/api/verify-payment', (req, res) => {
 });
 
 
-app.post(
-    "/api/webhook",
-    express.raw({ type: "application/json" }), // keeps raw body as Buffer
-    (req, res) => {
-        const secret = process.env.WEBHOOK_SECRET;
-        const signature = req.headers["x-razorpay-signature"];
 
-        try {
-            // req.body is a Buffer
-            const shasum = crypto.createHmac("sha256", secret);
-            shasum.update(req.body);
-            const expectedSign = shasum.digest("hex");
 
-            if (expectedSign === signature) {
-                const data = JSON.parse(req.body.toString());
-                console.log("Webhook verified:", data);
-                res.status(200).send("ok");
-            } else {
-                console.log("Invalid signature");
-                res.status(400).send("invalid signature");
-            }
-        } catch (err) {
-            console.error("Webhook error:", err);
-            res.status(500).send("server error");
-        }
-    }
-);
 
-app.use(express.json())
 
 async function getAccessToken() {
 
