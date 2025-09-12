@@ -4,6 +4,7 @@ const router = express.Router();
 const { checkUser } = require("../../middlewares/checkUser");
 const ConversationParticipant = require("../models/conversationParticipant.model");
 const Message = require("../models/message.model");
+const Users = require("../models/user.model");
 
 // Send a message
 router.post("/", checkUser, async (req, res) => {
@@ -15,9 +16,19 @@ router.post("/", checkUser, async (req, res) => {
 
     const message = await Message.create({ conversationId, senderId: me, text: content });
     console.log(conversationId.toString(), "conversationId from message route");
+
+    const fullMessage = await Message.findOne({
+        where: { id: message.id },
+        include: [
+            {
+                model: Users,
+                attributes: ["id", "Name", "email"]
+            }
+        ]
+    })
     // Emit to all participants in the room
     // io.to(`${conversationId.toString()}`).emit("newMessage", message);
-    io.to(`${conversationId.toString()}`).emit("newMessage", message);
+    io.to(`${conversationId.toString()}`).emit("newMessage", fullMessage);
     res.json(message);
 });
 
@@ -39,6 +50,12 @@ router.get("/:conversationId", checkUser, async (req, res) => {
         order: [["createdAt", "DESC"]],
         limit: Number(limit),
         offset: Number(offset),
+        include: [
+            {
+                model: Users,
+                attributes: ["id", "Name", "email"],
+            }
+        ]
     });
 
     res.json({

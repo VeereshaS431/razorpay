@@ -33,6 +33,8 @@ const defineAssociation = () => {
     User.hasMany(ConversationParticipant, { foreignKey: "userId" });
     Conversation.hasMany(ConversationParticipant, { foreignKey: "conversationId" });
 
+    Conversation.hasMany(ConversationParticipant, { foreignKey: "conversationId", as: "ConversationParticipantsAll" });
+
 
     // One-to-many: Conversation -> Messages
     Conversation.hasMany(Message, { foreignKey: "conversationId" });

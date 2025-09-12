@@ -17,6 +17,7 @@ const io = require("socket.io")(server, {
 });
 
 const socketHandler = require("./socket/socket");
+require("./nodeMailer/nodeMailer")
 
 socketHandler(io);
 
@@ -120,23 +121,23 @@ app.post('/api/verify-payment', (req, res) => {
 
 
 
-async function getAccessToken() {
+// async function getAccessToken() {
 
-    const privateKey = process.env.private_key.replace(/\\n/gm, "\n");
+//     const privateKey = process.env.private_key.replace(/\\n/gm, "\n");
 
-    const jwtClient = new google.auth.JWT({
-        email: process.env.client_email,
-        key: privateKey,
-        scopes: ["https://www.googleapis.com/auth/firebase.messaging"],
-    });
+//     const jwtClient = new google.auth.JWT({
+//         email: process.env.client_email,
+//         key: privateKey,
+//         scopes: ["https://www.googleapis.com/auth/firebase.messaging"],
+//     });
 
-    const tokens = await jwtClient.authorize();
-    console.log("Access Token:", tokens.access_token);
-}
+//     const tokens = await jwtClient.authorize();
+//     console.log("Access Token:", tokens.access_token);
+// }
 
-getAccessToken().catch((err) => {
-    console.error("Error generating token:", err);
-});
+// getAccessToken().catch((err) => {
+//     console.error("Error generating token:", err);
+// });
 
 sequelize.sync().then(() => {
     console.log("database connected")

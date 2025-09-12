@@ -18,9 +18,10 @@ router.post("/dm", checkUser, async (req, res) => {
     // Check if DM exists
     const existing = await Conversation.findOne({
         include: [{
-            model: Users,
-            where: { id: [me, peerId] },
-            through: { attributes: [] }
+            model: ConversationParticipant,
+            as: "ConversationParticipants",
+            required: true, // inner join
+            where: { userId: me }, // ensures only my conversations
         }],
         where: { type: "dm" },
     });
@@ -63,43 +64,88 @@ router.post("/group", checkUser, async (req, res) => {
 
 
 // Get all my conversations
+// router.get("/", checkUser, async (req, res) => {
+//     try {
+//         const me = req.user.id;
+//         const { userId } = req.query; // if passed, get DM with that user only
+
+//         // const whereClause = userId
+//         //     ? { // DM: find conversation where both me and userId exist
+//         //         [Op.and]: [
+//         //             { "$Users.id$": me },
+//         //             { "$OtherUsers.id$": userId }
+//         //         ]
+//         //     }
+//         //     : { "$Users.id$": me };
+
+//         const convos = await Conversation.findAll({
+//             include: [
+//                 // {
+//                 //     model: Users,
+//                 //     as: "Users",
+//                 //     attributes: ["id", "Name"],
+//                 //     through: { attributes: ["role"] },
+//                 //     where: whereClause
+//                 // },
+//                 {
+//                     model: ConversationParticipant,
+//                     as: "ConversationParticipant"
+//                 },
+//                 {
+//                     model: Message,
+//                     limit: 1,
+//                     order: [["createdAt", "DESC"]],
+//                 }
+//             ],
+//             order: [["updatedAt", "DESC"]],
+//             where: userId ? undefined : {}, // only apply where if DM
+//         });
+
+//         res.json(convos);
+//     } catch (err) {
+//         console.error("Error fetching conversations:", err);
+//         res.status(500).json({ error: "Server error" });
+//     }
+// });
+
 router.get("/", checkUser, async (req, res) => {
     try {
         const me = req.user.id;
-        const { userId } = req.query; // if passed, get DM with that user only
-
-        const whereClause = userId
-            ? { // DM: find conversation where both me and userId exist
-                [Op.and]: [
-                    { "$Users.id$": me },
-                    { "$OtherUsers.id$": userId }
-                ]
-            }
-            : { "$Users.id$": me };
 
         const convos = await Conversation.findAll({
             include: [
+                // Step 1: Filter conversations that include me
                 {
-                    model: Users,
-                    as: "Users",
-                    attributes: ["id", "Name"],
-                    through: { attributes: ["role"] },
-                    where: whereClause
+                    model: ConversationParticipant,
+                    as: "ConversationParticipants",
+                    required: true, // inner join
+                    where: { userId: me }, // ensures only my conversations
                 },
+                // Step 2: Include all participants with user details
                 {
-                    model: Users,
-                    as: "OtherUsers",
-                    attributes: ["id", "Name"],
-                    through: { attributes: [] }
+                    model: ConversationParticipant,
+                    as: "ConversationParticipantsAll",
+                    include: [
+                        {
+                            model: Users,
+                            attributes: ["id", "Name", "email"],
+                        }
+                    ]
                 },
+                // Last message
                 {
                     model: Message,
                     limit: 1,
                     order: [["createdAt", "DESC"]],
+                    include: [
+                        {
+                            model: Users,
+                            attributes: ["id", "Name"]
+                        }
+                    ]
                 }
             ],
             order: [["updatedAt", "DESC"]],
-            where: userId ? undefined : {}, // only apply where if DM
         });
 
         res.json(convos);
@@ -108,6 +154,9 @@ router.get("/", checkUser, async (req, res) => {
         res.status(500).json({ error: "Server error" });
     }
 });
+
+
+
 
 
 // Add/remove group members

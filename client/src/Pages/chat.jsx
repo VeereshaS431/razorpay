@@ -15,6 +15,7 @@ const Chat = () => {
     const [typingUsers, setTypingUsers] = useState([]);
     const [page, setPage] = useState(1);
     const [showGroupModal, setShowGroupModal] = useState(false);
+    const [showChatModal, setShowChatModal] = useState(false);
     const messagesEndRef = useRef();
     const socketRef = useRef();
 
@@ -27,7 +28,8 @@ const Chat = () => {
         if (!userId) return;
 
         console.log("Initializing socket for user:", userId);
-        const socket = io("http://localhost:3000", { query: { userId: selectedConversation?.id } });
+        // const socket = io("http://localhost:3000", { query: { userId: selectedConversation?.id } });
+        const socket = io("http://localhost:3000", { query: { userId } });
         socketRef.current = socket;
 
         socket.on("newMessage", (msg) => {
@@ -48,11 +50,12 @@ const Chat = () => {
                 )
             );
 
-            if (selectedConversation && msg.conversationId === selectedConversation.id) {
-                setMessages((prev) => [...prev, msg]);
-                socket.emit("readMessage", { messageId: msg.id });
-                scrollToBottom();
-            }
+            // if (selectedConversation) {
+            console.log(msg, "frommmmmmmmmmmmmm")
+            setMessages((prev) => [...prev, msg]);
+            socket.emit("readMessage", { messageId: msg.id });
+            scrollToBottom();
+            // }
         });
 
         socket.on("typing", ({ userId: typingUser }) => {
@@ -65,7 +68,7 @@ const Chat = () => {
         });
 
         return () => socket.disconnect();
-    }, [selectedConversation, typingUsers, userId]);
+    }, [userId]);
 
     // Fetch all users
     useEffect(() => {
@@ -105,9 +108,16 @@ const Chat = () => {
     };
 
     const selectConversation = async (conversation) => {
+        if (selectedConversation) {
+            // Leave the previous conversation room
+            socketRef.current.emit("leaveConversation", { conversationId: selectedConversation.id });
+        }
+
+        // Join the new conversation
         setSelectedConversation(conversation);
         setPage(1);
         socketRef.current.emit("joinConversation", { conversationId: conversation.id });
+
         await loadMessages(conversation.id, 1);
 
         setConversations((prev) =>
@@ -116,6 +126,8 @@ const Chat = () => {
             )
         );
     };
+
+
 
     const loadMessages = async (conversationId, pageNumber = 1) => {
         try {
@@ -136,11 +148,12 @@ const Chat = () => {
     const handleSend = async () => {
         if (!inputValue.trim() || !selectedConversation) return;
         try {
-            await axios.post(
-                "http://localhost:3000/api/messages",
-                { conversationId: selectedConversation.id, content: inputValue },
-                { headers: { Authorization: `Bearer ${token}` } }
-            );
+            // await axios.post(
+            //     "http://localhost:3000/api/messages",
+            //     { conversationId: selectedConversation.id, content: inputValue },
+            //     { headers: { Authorization: `Bearer ${token}` } }
+            // );
+            socketRef.current.emit("sendMessage", { conversationId: selectedConversation.id, content: inputValue })
             setInputValue("");
         } catch (err) {
             console.log(err);
@@ -186,7 +199,7 @@ const Chat = () => {
                 { peerId: targetUserId },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
-
+            console.log(res, "from dm res");
             // If conversation already exists or new one created, open it
             const conversation = res.data;
             setSelectedConversation(conversation);
@@ -196,23 +209,24 @@ const Chat = () => {
 
             // Refresh conversation list
             fetchConversations();
+            setShowChatModal(false)
         } catch (err) {
             console.log(err);
         }
     };
 
-    console.log(conversations, "from usersss")
-
+    console.log(conversations, "from usersss");
+    console.log(messages, "messages");
     return (
         <div className="chat-container">
             {/* Conversation List */}
             <div className="user-list">
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <h3>Chat</h3>
+                    <h3 style={{ cursor: "pointer" }} onClick={() => setShowChatModal(true)}>Chat</h3>
                     <p style={{ cursor: "pointer" }} onClick={() => setShowGroupModal(true)}>Create Group</p>
                 </div>
                 <ul>
-                    {conversations.map((conv) => (
+                    {conversations?.map((conv) => (
                         <li
                             key={conv.id}
                             style={{
@@ -223,38 +237,32 @@ const Chat = () => {
                         >
                             <strong>
                                 {conv.type === "dm"
-                                    ? conv.Users.find((u) => u.id != userId)?.Name
+                                    ? conv.ConversationParticipantsAll.find((u) => u.userId != userId)?.User?.Name
                                     : conv.title}
                             </strong>
                             <p className="last-message">{conv.lastMessage}</p>
-                            {conv.unread > 0 && <span className="badge">{conv.unread}</span>}
+                            {conv.ConversationParticipantsAll.some((u) => u.userId != userId) ? null : conv.unread > 0 && <span className="badge">{conv.unread}</span>}
                             {conv.type === "group" && (
                                 <small>
-                                    Members: {conv.Users.map((u) => u.Name).join(", ")}
+                                    Members: {conv.ConversationParticipantsAll.map((u) => u?.User?.Name).join(", ")}
                                 </small>
                             )}
                         </li>
                     ))}
                 </ul>
-                <ul>
-                    {users.map((u) => (
-                        <li onClick={() => startDM(u.id)} key={u.id}>
-                            {u.Name}
-                        </li>
-                    ))}
-                </ul>
+
             </div>
             {/* Chat Area */}
             <div className="chat-area">
                 <div className="header">
                     <h2>
-                        {selectedConversation
+                        {selectedConversation?.type === "group"
                             ? selectedConversation.title || "Chat"
-                            : "Select a conversation"}
+                            : selectedConversation?.ConversationParticipantsAll?.find((u) => u.userId != userId)?.User?.Name}
                     </h2>
                     {selectedConversation?.type === "group" && (
                         <small>
-                            Members: {selectedConversation.Users.map((u) => u.Name).join(", ")}
+                            Members: {selectedConversation.ConversationParticipantsAll.map((u) => u.User.Name).join(", ")}
                         </small>
                     )}
                 </div>
@@ -274,7 +282,7 @@ const Chat = () => {
                             className={`message ${msg.senderId === userId ? "own" : "other"}`}
                         >
                             {msg.senderId !== userId && (
-                                <strong>{msg.senderName || "User"}: </strong>
+                                <strong>{msg?.User?.Name || "User"}: </strong>
                             )}
                             <p>{msg.text}</p>
                             <small>{new Date(msg.createdAt).toLocaleTimeString()}</small>
@@ -334,6 +342,29 @@ const Chat = () => {
                     </div>
                 </div>
             )}
+
+            {showChatModal && (
+                <div className="modal-overlay">
+                    <div className="modal">
+                        <h3>Chat</h3>
+                        <ul>
+                            {users.map((u) => (
+                                // <li onClick={() => startDM(u.id)} key={u.id}>
+                                //     {u.Name}
+                                // </li>
+                                <div onClick={() => startDM(u.id)} key={u.id} style={{ padding: "10px", borderBottom: "1px solid #ccc", cursor: "pointer" }}>
+                                    {u.Name}
+                                </div>
+                            ))}
+                        </ul>
+                        <div className="modal-actions">
+                            {/* <button onClick={createGroup}>Create</button> */}
+                            <button onClick={() => setShowChatModal(false)}>Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 };

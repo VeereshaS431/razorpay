@@ -3,6 +3,7 @@
 
 const ConversationParticipant = require("../apis/models/conversationParticipant.model");
 const Message = require("../apis/models/message.model");
+const Users = require("../apis/models/user.model");
 
 
 module.exports = (io) => {
@@ -59,6 +60,8 @@ module.exports = (io) => {
         // =====================
         socket.on("joinConversation", async ({ conversationId }) => {
             try {
+
+                console.log(conversationId, "from  join conversation")
                 const participant = await ConversationParticipant.findOne({
                     where: { conversationId, userId },
                 });
@@ -79,26 +82,50 @@ module.exports = (io) => {
         });
 
         // =====================
+        // LEAVE CONVERSATION
+        // =====================
+
+        socket.on("leaveConversation", ({ conversationId }) => {
+            if (conversationId) {
+                socket.leave(conversationId.toString());
+                console.log(`User ${userId} left conversation ${conversationId}`);
+            }
+        });
+
+
+
+        // =====================
         // SEND MESSAGE
         // =====================
         socket.on("sendMessage", async ({ conversationId, content }) => {
             try {
+                console.log(conversationId, content, "form send message")
                 const participant = await ConversationParticipant.findOne({
                     where: { conversationId, userId },
                 });
-
+                console.log(participant, "from participanttttt")
                 if (!participant) {
                     console.warn(`User ${userId} tried to send message to conversation ${conversationId} but is not a member`);
                     return;
                 }
 
-                // const newMessage = await Message.create({
-                //     conversationId,
-                //     senderId: userId,
-                //     content,
-                // });
+                const newMessage = await Message.create({
+                    conversationId,
+                    senderId: userId,
+                    text: content,
+                });
 
-                // io.to(conversationId.toString()).emit("newMessage", newMessage);
+                const fullMessage = await Message.findOne({
+                    where: { id: newMessage.id },
+                    include: [
+                        {
+                            model: Users,
+                            attributes: ["id", "Name", "email"]
+                        }
+                    ]
+                })
+
+                io.to(`${conversationId.toString()}`).emit("newMessage", fullMessage);
             } catch (err) {
                 console.error("Error sending message:", err);
             }
