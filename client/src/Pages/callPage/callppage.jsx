@@ -210,20 +210,37 @@ export default function CallPage() {
     const localStreamRef = useRef(null);
 
     useEffect(() => {
+        // const newPeer = new Peer(undefined, {
+        //     host: "192.168.80.118", // your backend IP
+        //     port: 9000,
+        //     path: "/peerjs",
+        //     config: {
+        //         iceServers: [
+        //             { urls: "stun:stun.l.google.com:19302" },  // free Google STUN
+        //             // {
+        //             //     urls: "turn:openrelay.metered.ca:80",    // free public TURN
+        //             //     username: "openrelayproject",
+        //             //     credential: "openrelayproject"
+        //             // }
+        //         ],
+
+        //     }
+        // });
+
         const newPeer = new Peer(undefined, {
-            host: "192.168.80.118", // your backend IP
-            port: 9000,
+            host: "razorpay-p2yw.onrender.com",
+            secure: true,
+            port: 443,
             path: "/peerjs",
             config: {
                 iceServers: [
-                    { urls: "stun:stun.l.google.com:19302" },  // free Google STUN
-                    // {
-                    //     urls: "turn:openrelay.metered.ca:80",    // free public TURN
-                    //     username: "openrelayproject",
-                    //     credential: "openrelayproject"
-                    // }
-                ],
-                
+                    { urls: "stun:stun.l.google.com:19302" },
+                    {
+                        urls: "turn:openrelay.metered.ca:80",
+                        username: "openrelayproject",
+                        credential: "openrelayproject"
+                    }
+                ]
             }
         });
 
